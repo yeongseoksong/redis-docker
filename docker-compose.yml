@@ -1,0 +1,119 @@
+version: '3.7'
+
+networks:
+  redis-network:
+    driver: bridge
+ # Master Container
+services:
+  redis-master:
+    image: bitnami/redis:latest
+    environment: 
+      - REDIS_REPLICATION_MODE=master
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - 6379:6379
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    networks:
+      - redis-network
+    container_name: redis-master
+ # Slave (1) Container
+  redis-slave-1:
+    image: bitnami/redis:latest
+    environment: 
+      - REDIS_REPLICATION_MODE=slave
+      - REDIS_MASTER_HOST=redis-master
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - redis-network
+    ports:
+      - 6479:6379
+    extra_hosts:
+     - host.docker.internal:host-gateway
+    depends_on:
+      - redis-master
+    container_name: redis-slave-1
+    restart: always
+ 
+ # Slave (2) Container
+  redis-slave-2:
+    image: bitnami/redis:latest
+    environment: 
+      - REDIS_REPLICATION_MODE=slave  
+      - REDIS_MASTER_HOST=redis-master
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - redis-network
+    ports:
+      - 6579:6379
+    extra_hosts:
+     - host.docker.internal:host-gateway
+    depends_on:
+      - redis-master
+    container_name: redis-slave-2
+    restart: always
+ 
+ # Sentinel Container
+  redis-sentinel-1:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=3000
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PORT_NUMBER=6379
+      - REDIS_MASTER_SET=redis-master-set
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_SENTINEL_QUORUM=2
+    extra_hosts:
+     - host.docker.internal:host-gateway   
+    depends_on:
+      - redis-master
+      - redis-slave-1
+      - redis-slave-2
+    container_name: redis-sentinel-1
+    ports:
+      - '26379:26379'
+    networks:
+      - redis-network
+ 
+  redis-sentinel-2:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=3000
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PORT_NUMBER=6379
+      - REDIS_MASTER_SET=redis-master-set
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_SENTINEL_QUORUM=2
+    extra_hosts:
+     - host.docker.internal:host-gateway    
+    depends_on:
+      - redis-master
+      - redis-slave-1
+      - redis-slave-2
+    container_name: redis-sentinel-2
+    ports:
+      - '26380:26379'
+    networks:
+      - redis-network
+ 
+  redis-sentinel-3:
+    image: bitnami/redis-sentinel:latest
+    environment:
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=3000
+      - REDIS_MASTER_HOST=redis-master
+      - REDIS_MASTER_PORT_NUMBER=6379
+      - REDIS_MASTER_SET=redis-master-set
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_SENTINEL_QUORUM=2
+    extra_hosts:
+     - host.docker.internal:host-gateway
+    depends_on:
+      - redis-master
+      - redis-slave-1
+      - redis-slave-2
+    container_name: redis-sentinel-3
+    ports:
+      - '26381:26379'
+    networks:
+      - redis-network
+
